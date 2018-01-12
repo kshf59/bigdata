@@ -1,0 +1,31 @@
+- 서버 배치도
+
+              +---------------+    +---------------+
+              |  server-1     |    |  server-2     |
+              +---------------+    +---------------+
+  Host Name --|  hd-master    |    |  hd-sec       |
+              +---------------+    +---------------+
+  Hadoop -----|  name-node    |    |  secondary    |
+              |  resource     |    |   -name-node  |
+              |   -manager    |    |  node-manager |
+              |               |    |  data-node    |
+              +---------------+    +---------------+
+  Spark ------|               |    |  spk-master   |
+              +---------------+    +---------------+
+
+
+              +---------------+    +---------------+
+              |  server-3     |    |  server-4     |
+              +---------------+    +---------------+
+  Host Name --|  hd-worker01  |    |  hd-worker02  |
+              +---------------+    +---------------+
+  Hadoop -----|  node-manager |    |  node-manager |
+              |  data-node    |    |  data-node    |
+              +---------------+    +---------------+
+  Spark ------|  spk-worker01 |    |  spk-worker02 |
+              +---------------+    +---------------+
+  R ----------|  flume        |    |  R-server     |
+  etc app     |  scrapy       |    |  RStudio      |
+              |               |    |  RStudio      |
+              |               |    |   -connect    |
+              +---------------+    +---------------+

@@ -1,0 +1,35 @@
+** RStudio Connet 설치하기
+
+   > su -
+
+   1) R 설치하기
+   
+	  > wget http://mirror.us.leaseweb.net/epel/6/x86_64/epel-release-6-8.noarch.rpm
+	    => 최신버전 확인해서 깔기
+	  > wget https://www.fedoraproject.org/static/0608B895.txt
+	  > mv 0608B895.txt /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+		
+	  > rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+	  > rpm -qa gpg*
+	  > rpm -ivh epel-release-6-8.noarch.rpm
+
+      > yum install R
+
+      ** GPG => RSA 암호 기술 
+             => RSA는 암호(이하 키)가 2개 
+             => 어떤 키로 암호화하면 다른 키로만 복호화 가능
+
+      ** yum 으로 설치하려고 할때 특정 패키지가 설치 안 되는 경우가 있음
+         이럴 때 GPG-key를 설치한 후에 yum 리포지토리를 추가하면 설치가 된다
+
+   2) RStudio Connect 설치
+
+      > $ wget https://s3.amazonaws.com/rstudio-connect/centos6.3/x86_64/rstudio-connect-1.5.6.2-13-x86_64.rpm
+	    => 최신버전 확인해서 깔기
+      > $ yum install --nogpgcheck rstudio-connect-1.5.6.2-13-x86_64.rpm
+
+
+
+
+$ sudo firewall-cmd --permanent --zone=public --add-port=3939/tcp
+$ sudo firewall-cmd --reload

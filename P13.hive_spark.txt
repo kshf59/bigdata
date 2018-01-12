@@ -1,0 +1,228 @@
+﻿- hive 설치
+
+  => DB 설치하기
+
+     # yum makecache fast
+     ====> 필수 설치
+     # sudo yum -y install mariadb.x86_64    <--- mysql client
+     # sudo yum -y install mariadb-server    <--- mysql server
+     ====> 부가 설치
+     # sudo yum -y install mytop innotop     <--- mysql monitor tool
+     # sudo yum -y install mysqlreport mysqltuner <--- mysql tunner
+     # sudo yum -y install mysql-connector-python mysql-connector-java  <--- mysql connector
+
+     # sudo systemctl start mariadb
+     # sudo systemctl status mariadb
+
+
+     # sudo firewall-cmd --permanent --zone=public --add-port=3306/tcp
+     # sudo firewall-cmd --reload
+
+     # mysql
+
+  => mysql - hive 계정 생성
+
+     # mysql -u root
+
+       MariaDB [(none)]> CREATE USER 'hive'@'%' IDENTIFIED BY 'PASSWORD';
+       MariaDB [(none)]> GRANT ALL ON *.* TO 'hive'@LOCALHOST IDENTIFIED BY 'PASSWORD';
+
+     # mysql -u hive -p
+      
+       MariaDB [(none)]> create database hive;
+
+
+  => hive 설치
+
+     # cd /opt
+     # wget http://mirror.apache-kr.org/hive/stable-2/apache-hive-2.3.2-bin.tar.gz
+     # tar -zxvf apache-hive-2.3.2-bin.tar.gz
+     # rm -rf apache-hive-2.3.2-bin.tar.gz
+     # ln -s apache-hive-2.3.2-bin hive2
+     # chown hadoop:hadoop -R hive2
+
+  => hive 환경 설정
+
+     # cd /etc/profile.d
+     # sudo vi hive.sh
+
+       export HIVE_HOME=/opt/hive2
+       export PATH=$PATH:$HIVE_HOME/bin
+
+     # source /etc/profile
+     # sudo su - 
+     # source /etc/profile
+     # ctrl + d
+
+  => JDBC 다운로드
+
+     # cd $HIVE_HOME/lib
+     # wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.45.tar.gz
+     # tar xvfz mysql-connector-java-5.1.45.tar.gz mysql-connector-java-5.1.45/mysql-connector-java-5.1.45-bin.jar
+
+     # mv ./mysql-connector-java-5.1.45/mysql-connector-java-5.1.45-bin.jar .
+     # rm -rf mysql-connector-java-5.1.45/
+     # rm mysql-connector-java-5.1.45.tar.gz
+
+
+  => hive 환경설정
+
+     # cd $HIVE_HOME/conf
+     # cp hive-env.sh.template hive-env.sh
+     # vi hive-env.sh
+       ....
+       HADOOP_HOME=${HADOOP_HDFS_HOME}
+       ....
+
+     # vi hive-site.xml
+
+       <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+       <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+       <configuration>
+           <property>
+               <name>hive.metastore.local</name>
+               <value>false</value>
+           </property>
+           <property>
+               <name>javax.jdo.option.ConnectionURL</name>
+               <value>jdbc:mysql://localhost:3306/hive?createDatabaseIfNotExist=true</value>
+           </property>             
+           <property>              
+               <name>javax.jdo.option.ConnectionDriverName</name>
+               <value>com.mysql.jdbc.Driver</value>
+           </property>
+           <property>
+               <name>javax.jdo.option.ConnectionUserName</name>
+               <value>hive</value>
+           </property>
+           <property>
+               <name>javax.jdo.option.ConnectionPassword</name>
+               <value>0000</value> ====> 패스워드 입력
+           </property>
+           <property>
+               <name>system:java.io.tmpdir</name>
+               <value>/tmp/hive/java</value>
+           </property>
+           <property>
+               <name>system:user.name</name>
+               <value>${user.name}</value>
+           </property>
+           <property>
+               <name>hive.metastore.warehouse.dir</name>
+               <value>hdfs://hadoop-master:8020/user/hive/warehouse</value>
+           </property>
+       </configuration>
+
+
+  => metastore 초기화
+
+     # cd /opt/hive2/bin
+     # schematool -initSchema -dbType mysql
+       ....
+       ....
+       => "schemaTool completed" 출력 확인
+
+
+  => 하둡 폴더 생성
+
+     # start-all.sh
+
+     # hdfs dfs -mkdir /tmp
+     # hdfs dfs -mkdir -p /user/hive/warehouse
+     # hdfs dfs -chmod -R g+x /tmp
+     # hdfs dfs -chmod -R g+x /user/hive
+
+- hive 실행/테스트
+
+   데이터 샘플 다운로드 받기 http://jihoonlee.tistory.com/6
+
+  # hive
+
+    hive> show tables;
+    hive> CREATE TABLE USER_INFO (NAME STRING, ADDRESS STRING)
+          ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' 
+          LINES TERMINATED BY '\n';
+
+    hive> LOAD DATA FILE INPATH '/home/hadoop/user_info.csv' OVERWRITE INTO TABLE USER_INFO;
+    hive> select * from user_info;
+
+    hive> exit;
+
+
+create table sales2017 (dt string, locat string, temp float, humi float, pm10 int, pm2 int, 
+           ozone float, nitrogen float, carbon float, sulfurous float, sales int)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' 
+LINES TERMINATED BY '\n';
+
+LOAD DATA FILE INPATH '/home/hadoop/sales.2017.csv' OVERWRITE INTO TABLE sales2017;
+
+
+- 클라이언트에서 hive 에 접속
+  
+  => beeline 은 hiveserver2를 이용하여 원격에서 하이브 쿼리를 실행하기 위한 도구
+
+  # hiveserver2 &
+
+  # sudo firewall-cmd --permanent --zone=public --add-port=10000/tcp
+  # sudo firewall-cmd --reload
+
+  # vi /opt/hadoop/etc/hadoop/core-site.xml
+
+    ....                        ====> <<user id 입력>>
+    <property>                 ------
+        <name>hadoop.proxyuser.hadoop.groups</name>
+        <value>*</value>
+    </property>
+    <property>
+        <name>hadoop.proxyuser.hadoop.hosts</name>
+        <value>*</value>       ------
+    </property>                ====> <<user id 입력>>
+
+
+  # scp /opt/hadoop/etc/hadoop/core-site.xml hadoop@hadoop-master:/opt/hadoop/etc/hadoop/.
+  # scp /opt/hadoop/etc/hadoop/core-site.xml hadoop@hadoop-worker01:/opt/hadoop/etc/hadoop/.
+  # scp /opt/hadoop/etc/hadoop/core-site.xml hadoop@hadoop-worker02:/opt/hadoop/etc/hadoop/.
+  # scp /opt/hadoop/etc/hadoop/core-site.xml hadoop@hadoop-worker03:/opt/hadoop/etc/hadoop/.
+
+
+  # stop-all.sh
+  # start-all.sh
+
+  # hiveserver2 &
+
+  # beeline
+
+    beeline> !connect jdbc:hive2://localhost:10000/default
+
+
+- spark 환경설정
+
+  # mkdir template
+  # mv *.template template/.
+
+  # cd /opt/spark/conf
+  # cp /opt/hive2/conf/hive-site.xml .
+  # cp /opt/hadoop/etc/hadoop/core-site.xml .
+  # cp /opt/hadoop/etc/hadoop/hdfs-site.xml .
+
+- hive lib폴더 hive 에 있는 mysql-connector~~.jar 를 스파크 jars 폴더안에 복사해 둔다.
+- https://stackoverflow.com/questions/43518683/could-not-connect-apache-spark-2-1-0-with-hive-2-1-1-metastore
+
+- spark 연동
+  
+  => Spark - Hive - Mariadb - R - RStudio 동일 서버에 셋팅
+
+  => http://spark.rstudio.com/examples/yarn-cluster-emr/ 페이지 하단 예제 참고
+  
+  => http://hadoop-worker03:8787/ 접속
+
+  > Sys.setenv(SPARK_HOME="/opt/spark")
+      
+  => "connections tab - spark" 클릭
+
+  => "master - cluster" 선택
+
+  => "yarn" 입력하고 OK 클릭
+
+
+

@@ -1,0 +1,31 @@
+﻿- Hive 에 2017 매출 데이터 uploading
+
+  hive> create table sales2017 (
+          dt string, locat string, 
+          temp float, humi float, pm10 int, pm2 int, 
+          ozone float, nitrogen float, carbon float, sulfurous float, 
+          sales int)
+        ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' 
+        LINES TERMINATED BY '\n';
+
+  hive> LOAD DATA LOCAL INPATH '/home/hadoop/sales.2017.csv' OVERWRITE INTO TABLE sales2017;
+
+
+- 잠실 매장 데이터 생성 : 실외 오픈 매장
+
+  # 실외 오픈 매장이라는 가정 하에 데이터 생성한다.
+  sales2017.tmp <- cbind(sales2017, sales2=ifelse(sales2017$locat=="잠실", 
+                                                  ifelse ( substr(sales2017$dt,1,6) %in% c('201703','201704','201705','201707','201708'), # 중국발 미세먼지, 장마철
+                                                    ifelse(sales2017$pm10<80, 
+                                                            ifelse(substr(sales2017$dt,1,6) %in% c('201703','201704','201705'), # 중국발 미세먼지
+                                                                  sales2017$sales-sales2017$pm2*1.3,
+                                                                  sales2017$sales-sales2017$pm10*1.2 # 장마철
+                                                            ),
+                                                            sales2017$sales),
+                                                    sales2017$sales),
+                                                  sales2017$sales))
+  # 필요한 필드만 남긴다.
+  jamsil <- subset(sales2017.tmp, locat == "잠실", select = c(dt, temp, humi, pm10, sales2)) 
+  # 파일 저장한다.
+  write.csv(jamsil, "jamsil.csv")
+

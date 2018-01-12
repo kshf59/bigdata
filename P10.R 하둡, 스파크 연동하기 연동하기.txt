@@ -1,0 +1,203 @@
+
+> root 계정으로 실행
+
+
+1) R 깔기
+> wget http://mirror.us.leaseweb.net/epel/epel-release-latest-7.noarch.rpm
+> wget https://www.fedoraproject.org/static/0608B895.txt
+> mv 0608B895.txt /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+> rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+> rpm -qa gpg*
+> rpm -ivh epel-release-latest-7.noarch.rpm
+> yum install R
+
+
+      ** GPG => RSA 암호 기술 
+             => RSA는 암호(이하 키)가 2개 
+             => 어떤 키로 암호화하면 다른 키로만 복호화 가능
+
+      ** yum 으로 설치하려고 할때 특정 패키지가 설치 안 되는 경우가 있음
+         이럴 때 GPG-key를 설치한 후에 yum 리포지토리를 추가하면 설치가 된다
+
+
+2) RStudio 서버 설치
+
+> wget https://download2.rstudio.org/rstudio-server-rhel-1.1.383-x86_64.rpm
+> yum install --nogpgcheck rstudio-server-rhel-1.1.383-x86_64.rpm
+> rstudio-server verify-installation
+	   rstudio-server stop/waiting
+       rstudio-server start/running, process 28651
+
+  1. 웹으로 접속한다.
+  
+     http://<server-ip>:8787
+
+  2. 포트를 열어 줘야 한다.
+
+
+> firewall-cmd --permanent --zone=public --add-port=8787/tcp
+
+
+> firewall-cmd --reload
+
+> rstudio-server status
+--> 꺼져있다면
+> rstudio-server start
+--> 일반적으로 데몬은 su 계정으로 접속해야 한다더라
+
+인터넷 브라우저에
+http://192.168.198.129:8787/ 접속 아이디는 hadoop 마라나타
+
+
+3) RStudio Connect 설치
+> sudo wget https://s3.amazonaws.com/rstudio-connect/centos6.3/x86_64/rstudio-connect-1.5.10-6.x86_64.rpm
+> sudo yum install --nogpgcheck rstudio-connect_1.5.10-6.x86_64.rpm
+   1. 환경설정
+   
+      > vi /etc/rstudio-connect/rstudio-connect.gcfg  
+
+ 	  	  SenderEmail = bellcran@paran.com
+		  Address = http://rconnect.bitcamp.com
+
+>  firewall-cmd --permanent --zone=public --add-port=3939/tcp
+>  firewall-cmd --reload
+
+
+4) R 스파크 연동하기
+
+ 1. Rstudio-server 접속 하고 connection 에 스파크 누르고 패키지 설치
+	--> 설치하기 전에
+
+> yum install -y openssl-devel
+> yum -y install curl
+> yum -y install libcurl libcurl-devel
+> yum -y install libxml2 libxml2-devel
+	--> 이걸 리눅스에 미리 깔아 놓아라 안깔면 spark connection 설치중 오류뜬다.
+
+
+
+1. RHadoop 패키지를 설치하기 위한 dependency 같은 패키지들
+install.packages(c("rJava","Rcpp","RJSONIO","bitops","digest",
+"functional","stringr","plyr","reshape2","dplyr","R.methodsS3","caTools","Hmisc"))
+intall.packages("data.table")
+
+2. 환경변수 설정 아래 작업은 리눅스에서 일반적인 환경변수 export와 동일한 효과를 낼수있다.
+Sys.setenv("HADOOP_PREFIX"="/opt/hadoop")
+Sys.setenv("HADOOP_CMD"="/opt/hadoop/bin/hadoop")
+Sys.setenv("HADOOP_STREAMING"="/opt/hadoop/lib/hadoop-streaming-2.8.2.jar")
+	-->> https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-streaming/2.8.2 에서 다운 받고
+		/opt/hadoop/lib 밑에 저장
+
+3. 여기서 rmr rhdfs 깔아라
+https://github.com/RevolutionAnalytics/RHadoop/wiki/Downloads
+
+> library(rhdfs) 
+> hdfs.init() 
+> library(rmr2)
+
+*************************** Example ***************************
+
+ctl <- c(4.17,5.58,5.18,6.11,4.50,4.61,5.17,4.53,5.33,5.14)
+trt <- c(4.81,4.17,4.41,3.59,5.87,3.83,6.03,4.89,4.32,4.69)
+group <- gl(2, 10, 20, labels = c("Ctl","Trt"))
+weight <- c(ctl, trt)
+
+***** 쓰기 *****
+model <- lm(weight ~ group)
+#model <- lm(weight ~ group - 1) # omitting intercept
+modelfilename <- "my_smart_unique_name"
+modelfile <- hdfs.file(modelfilename, "w")
+hdfs.write(model, modelfile)
+hdfs.close(modelfile)
+
+***** 읽기 *****
+modelfile = hdfs.file(modelfilename, "r")
+m <- hdfs.read(modelfile)
+model <- unserialize(m)
+hdfs.close(modelfile)
+
+
+*************************** Example2 ***************************
+
+
+infile <- "/tmp/ex2" 
+# 분산파일시스템(dfs)에 파일이 존재한다면 삭제 
+if(dfs.exists(infile)) dfs.rmr(infile) 
+# 입력 데이터를 dfs에 저장 
+inputValue = to.dfs(1:1000, output=infile) 
+# MapReduce 함수
+mr_func <- mapreduce( 
+	input = inputValue, 
+	map = function(k, v){ 
+		lapply(seq_along(v), function(r){ x <- rnorm(100) 
+		keyval(r, max(x)) # 표준정규분포 난수 100개 중에 최댓값 } ) } ) 
+output <- from.dfs(mr_func) 
+maxs <- do.call("c", lapply(output$val, "[[", 2))
+ hist(maxs, breaks=30)
+
+
+*************************** Example3 ***************************
+
+http://stat-computing.org/dataexpo/2009/
+	--> 2008년 csv 파일 다운 받고 opt에 저장
+$ hadoop fs -mkdir -p /input/airline
+$ hadoop fs -put /opt/2008.csv /input/airline/2008.csv
+
+
+library(rhdfs)
+ hdfs.init() 
+library(rmr2) 
+
+Sys.setenv(HADOOP_CMD="/home/a2d/hadoop/hadoop-2.8.0/bin/hadoop") 
+Sys.setenv(HADOOP_STREAMING="/home/a2d/hadoop/hadoop-2.8.0/share/hadoop/tools/lib/hadoop-streaming-2.8.0.jar")
+
+ hdfs.del("/tmp/ex2") # delete the result
+ inputfile <- "/input/airline/2008.csv" 
+
+## map func 
+mapper = function(., fields) { 
+	year = as.character(fields[[1]]) 
+	month = as.character(fields[[2]]) 
+	day = as.character(fields[[3]])
+	output.key = data.frame(date = paste(year, month, day, sep='-') ) 
+	arrDelay = as.numeric(as.character(fields[[15]])) 
+	depDelay = as.numeric(as.character(fields[[16]])) 
+	output.val = data.frame(arrDelay = arrDelay, depDelay = depDelay) 
+	output.val$arrDelay = as.numeric(output.val$arrDelay) 
+	output.val$depDelay = as.numeric(output.val$depDelay) 
+	keyval( output.key, output.val ) 
+} 
+
+## reduce func 
+reducer = function(k, v) { 
+	output.val = data.frame(arrDelay = mean(v$arrDelay, na.rm=T), 
+				depDelay = mean(v$depDelay, na.rm=T)) 
+	keyval(k, output.val) 
+} 
+
+result <- try(mapreduce(input = inputfile, 
+			output = "/tmp/ex2", 
+			input.format = make.input.format("csv", sep = ","), 
+			map = mapper, 
+			reduce = reducer, combine = T )) 
+
+### preprocessing 
+
+data = from.dfs(result) 
+data = as.data.frame(data, stringsAsFactors = F) 
+colnames(data) = c("date", "arrDelay", "depDelay") 
+data = transform(data , 
+			date = as.Date(date) , 
+			arrDelay = arrDelay , depDelay = depDelay ) 
+
+rownames(data) = NULL 
+data = data[complete.cases(data),] 
+data = data[order(data$date),] 
+library(ggplot2) 
+
+### ggplot 
+ggplot(data, aes(date)) + 
+	geom_line(aes(y = arrDelay, colour = "arrDelay")) + 
+	geom_line(aes(y = depDelay, colour = "depDelay"))
+
+*********************************************************************************

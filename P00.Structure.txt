@@ -1,0 +1,30 @@
+- Structure Diagram
+ 
+              +----- analysis infra --------------------------------------------------------+
+              |                                                                             |
+              |                send analysis-data (hive, sparklyr)                          |
+              |                 |                   save report                             |
+              |                 |    analysis        |                                      |
+              |                 |    create report   |                                      |
+              |       ETL       |    **R (.rmd)      |                                      |
+              |   +----------+  |   +------------+   |   +--------------+                   |
+              |   |  Spark   |----->|  RStudio   |------>|  RS-connect  |                   |
+        flume |   +----------+      +------------+       +--------------+                   |
+  WAS --------|-->|  Hadoop  |      |  R-Server  |               |view report               |
+  -file       |   +----------+      +------------+               ↓                          |
+  *nodejs     |     ↑      ↑               ↑                    officer                     |
+              |     |flume |flume          |                    http://rconnect:3939        |
+              |     |      |               |                    permission, authorization   |
+              |     |      |               |                                                |
+              +-----|------|---------------|------------------------------------------------+
+                    |      |               |
+                    |      |               +-----> data-analyst
+                    |      open-api                http://rstudio:8787
+                    |      -file                         | create rule
+                    |      **nodejs                      | **R
+                    crawl                 WAS <----------+
+                    -file                 -DB          save rule
+                    **scrapy              **HTML/JS
+                    **python              individual service
+
+※ ETL : Extract, Transform, Load

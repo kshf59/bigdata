@@ -1,0 +1,44 @@
+﻿1. RHadoop 패키지를 설치하기 위한 dependency 같은 패키지들
+
+    install.packages(c("rJava","Rcpp","RJSONIO","bitops","digest",
+    "functional","stringr","plyr","reshape2","dplyr","R.methodsS3","caTools","Hmisc"))
+    intall.packages("data.table")
+
+2. 환경변수 설정 아래 작업은 리눅스에서 일반적인 환경변수 export와 동일한 효과를 낼수있다.
+
+    Sys.setenv("HADOOP_PREFIX"="/Users/hadoop/hadoop-1.1.2")
+    Sys.setenv("HADOOP_CMD"="/Users/hadoop/hadoop-1.1.2/bin/hadoop")
+    Sys.setenv("HADOOP_STREAMING"="/Users/hadoop/hadoop-1.1.2/contrib/streaming/hadoop-streaming-1.1.2.jar")
+
+    Sys.setenv("HADOOP_PREFIX"="/opt/hadoop")
+    Sys.setenv("HADOOP_CMD"="/opt/hadoop/bin/hadoop")
+    Sys.setenv("HADOOP_STREAMING"="/opt/hadoop/contrib/streaming/hadoop-streaming-1.2.1.jar")
+
+3. 여기서 rmr rhdfs 깔아라
+
+    https://github.com/RevolutionAnalytics/RHadoop/wiki/Downloads
+
+    > library(rhdfs) 
+    > hdfs.init() 
+    > library(rmr2)
+
+
+***** Example *****
+ctl <- c(4.17,5.58,5.18,6.11,4.50,4.61,5.17,4.53,5.33,5.14)
+trt <- c(4.81,4.17,4.41,3.59,5.87,3.83,6.03,4.89,4.32,4.69)
+group <- gl(2, 10, 20, labels = c("Ctl","Trt"))
+weight <- c(ctl, trt)
+
+***** 읽기 *****
+model <- lm(weight ~ group)
+#model <- lm(weight ~ group - 1) # omitting intercept
+modelfilename <- "my_smart_unique_name"
+modelfile <- hdfs.file(modelfilename, "w")
+hdfs.write(model, modelfile)
+hdfs.close(modelfile)
+
+***** 쓰기 *****
+modelfile = hdfs.file(modelfilename, "r")
+m <- hdfs.read(modelfile)
+model <- unserialize(m)
+hdfs.close(modelfile)

@@ -1,0 +1,24 @@
+#### 마이SQL 
+** Using RStudio Connections
+http://db.rstudio.com/databases
+
+** Databases using R
+http://db.rstudio.com/
+
+** RStudio 에서 제공하는 Databases 종류
+http://db.rstudio.com/databases
+
+** MySQL using R
+http://db.rstudio.com/databases/my-sql/
+
+
+#### 스파크R
+** sparklyr: R interface for Apache Spark
+http://spark.rstudio.com/
+
+** sparklyr : Function Reference
+http://spark.rstudio.com/reference/
+
+** Deployment and Configuration
+http://spark.rstudio.com/deployment/
+

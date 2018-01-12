@@ -1,0 +1,50 @@
+﻿** Hadoop 2.x
+
+- slaves
+
+  => worker node 지정
+  
+  $ pwd
+    /opt/hadoop/conf
+
+  $ vi slaves
+
+    hd-worker01.local
+    hd-worker02.local
+
+
+
+- hdfs-site.xml 
+
+  => secondary name node 지정
+
+  $ vi hdfs-site.xml 
+  
+      ....
+      <property>
+        <name>dfs.http.address</name>
+        <value>centos01:50070</value>
+      </property>
+      <property>
+        <name>dfs.secondary.http.address</name>
+        <value>centos02:50090</value>
+      </property>
+      ....
+
+- /var/lib/hadoop/dfs/name/1
+  /var/lib/hadoop/dfs/name/2
+  /var/lib/hadoop/dfs/data/1
+  /var/lib/hadoop/dfs/data/2
+
+  => 폴더 생성, 권한 설정, hadoop:hadoop, 755
+
+  $ pwd
+    /var/lib/hadoop
+  $ chown -R hadoop:hadoop hadoop
+  $ chmod -R 755 hadoop
+  $ hadoop namenocde -format
+
+
+** Spark 2.x
+
+

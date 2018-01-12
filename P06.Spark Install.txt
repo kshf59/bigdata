@@ -1,0 +1,104 @@
+- Hadoop Cluster & Spark 설치하기 - 3.Spark 설치
+
+  => 출처: http://daeson.tistory.com/279
+  => 출처: http://daeson.tistory.com/278
+  => 출처: http://daeson.tistory.com/277
+
+  1. 설치파일 다운로드
+     
+     $ su - hadoop
+     $ cd /opt
+     $ wget http://www.eu.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz
+
+  2. 압축 해제
+
+     $ tar -zxf spark-2.0.2-bin-hadoop2.7.tgz
+
+  3. 디렉토리명 변경
+
+     $ ln -s spark-2.0.2-bin-hadoop2.7/ spark
+
+     ### in conf/spark-env.sh ###
+     $ vi conf/spark-env.sh
+
+       SPARK_DIST_CLASSPATH=$(hadoop classpath)
+
+
+     **  `conf / spark-env.sh`는 Spark 설치 될 때 기본적으로 존재하지 않는다. 
+         `conf / spark-env.sh.template` 파일을 복사해서 만든다.
+
+     ** Spark를 사용하여 HDFS에서 읽고 쓰려면, Spark의 클래스 경로에 포함되어야하는 두 개의 Hadoop 구성 파일이 있다 
+
+        - `hdfs-site.xml` : HDFS 클라이언트에 대한 기본 동작을 제공
+        - `core-site.xml` : 기본 파일 시스템 이름을 설정
+
+        이러한 파일을 Spark가 볼 수 있게 하려면 `$ SPARK_HOME / spark-env.sh` 파일의 `HADOOP_CONF_DIR`을 
+        설정 파일이 들어있는 위치로 설정
+
+        HADOOP_CONF_DIR=${HADOOP_DIR}/etc/hadoop
+
+     ==> https://spark.apache.org/docs/latest/configuration.html#environment-variables
+
+
+  4. 환경 변수 설정
+
+     $ su -
+     $ cd /etc/profild.d/
+     $ vi spark.sh
+
+       export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+       export SPARK_HOME=/home/hduser/spark
+       export PATH=$PATH:$SPARK_HOME/bin
+
+     $ source /etc/profile
+     $ ctrl + d
+     $ source /etc/profile
+
+     $ echo $SPARK_HOME
+     $ echo $PATH
+
+
+** 쉘 명령어 라인에서 "spark + tab" => 실행 가능한 명령어 모음이 나온다.
+
+** Hadoop과의 연결
+   ${SPARK_DIR}/conf/spark-env.sh.template 을 복사하여 같은 경로에 spark-env.sh 파일을 생성한다.
+   파일을 열고, 다음 변수를 추가
+   
+   export HADOOP_CONF_DIR=${HADOOP_DIR}/etc/hadoop
+
+
+   Yarn-client와 연결
+   다음 명령어가 정상적으로 수행되는지 확인합니다.
+   단, 수행하기 이전에 Hadoop 2.5.1 과 Yarn이 정상적으로 수행되고 있어야합니다.
+
+   $ ./bin/spark-shell --master yarn-client
+   중간에 에러 메시지 없이
+   scala>
+   출력된다면 정상적으로 연결이 된 상태
+
+** 스파크-하둡 읽고 쓰기 테스트
+$ touch testfile.txt
+$ echo >> testfile.txt "안녕 사랑 믿음 소망 바이 머리 다리"
+$ hdfs dfs -put testfile.txt /user/hadoop
+$ hdfs dfs -ls /user/hadoop
+
+scala> val test = sc.textFile("hdfs://hadoop-master:8020/user/hadoop/testfile.txt")
+scala> val counting = test.flatMap(line=>line.split(" ")).map(word=>(word,1)).reduceByKey(_+_)
+scala> counting.take(30)
+scala> counting.saveAsTextFile("hdfs://hadoop-master:8020/user/hadoop/testResult")
+
+
+- 스파크 포트 설정
+
+/opt/spark/conf/spark-defaults.conf
+
+22 spark.master                     spark://hadoop-master:7077
+
+:wq
+
+
+sudo firewall-cmd --permanent --zone=public --add-port=7077/tcp
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-ports
+
+

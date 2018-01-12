@@ -1,0 +1,187 @@
+﻿******** 최종 셋팅
+
+*** /etc/profile.d/spark.sh 
+  
+    $ vi /etc/profile.d/spark.sh 
+    
+        export SPARK_HOME=/opt/spark
+        export PATH=${SPARK_HOME}/bin:${PATH}
+
+    $ source /etc/profile
+
+
+*** slaves
+    hd-worker01
+    hd-worker02
+
+*** log4j~ conf
+    ....
+    log4j.logger.org.apache.spark.repl.Main=INFO
+    ....
+
+*** spark-env.sh
+    
+    export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+
+
+*** spark-default.conf
+
+    spark.master        spark://hd-sec:7077
+
+
+*** yarn-site.xml
+    ....
+    <property>
+        <name>yarn.resourcemanager.address</name>
+        <value>hd-master:8032</value>
+    </property>
+    ....
+
+    <property>
+        <name>yarn.nodemanager.pmem-check-enabled</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>yarn.nodemanager.vmem-pmem-ratio</name>
+        <value>5</value>
+    </property>
+
+
+
+
+
+
+*** 방화벽
+    => https://www.slideshare.net/HyeonSeokChoi/ch9-26007052
+    => http://incredible.ai/spark/2016/02/11/Spark-YARN-Cluster/
+
+    #====> yarn
+    sudo firewall-cmd --permanent --zone=public --add-port=8032/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8033/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8030/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8031/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8040/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=10020/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8088/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8042/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=19888/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8081/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=7077/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=4040/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=18080/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=8080/tcp
+    #====> spark
+    sudo firewall-cmd --permanent --zone=public --add-port=9091/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=9092/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=9093/tcp
+    sudo firewall-cmd --permanent --zone=public --add-port=9094/tcp
+
+    sudo firewall-cmd --reload
+
+
+*** /etc/profile.d/spark.sh 
+  
+    $ vi /etc/profile.d/spark.sh 
+    
+        export SPARK_HOME=/opt/spark
+        export PATH=${SPARK_HOME}/bin:${PATH}
+
+    $ source /etc/profile
+
+
+*** slaves
+    hd-worker01
+    hd-worker02
+
+*** log4j~ conf
+    ....
+    log4j.logger.org.apache.spark.repl.Main=INFO
+    ....
+
+*** spark-env.sh
+    
+    export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    export SPARK_WORKER_PORT=9091
+
+
+*** spark-default.conf
+
+    spark.master        spark://hd-sec:7077
+    spark.acls.enable   true
+    spark.admin.acls    hadoop
+    spark.authenticate  true
+    spark.authenticate.secret akfkskxk
+    spark.driver.port   9092
+    spark.blockManager.port 9093
+
+    ====> 다른 방법
+
+        .set("spark.driver.port", "51810") 
+        .set("spark.blockManager.port", "51814") 
+        .set("spark.executor.port", "51815") 
+        .set("spark.broadcast.port", "51812") 
+        .set("spark.replClassServer.port", "51813") 
+        .set("spark.fileserver.port", "51811") 
+
+    ====> 2.x
+
+        between spark.driver.port and (spark.driver.port + spark.port.maxRetries)
+        between spark.driver.blockManager.port and (spark.driver.blockManager.port + spark.port.maxRetries)
+
+
+*** yarn-site.xml
+
+<property>
+    <name>yarn.nodemanager.pmem-check-enabled</name>
+    <value>false</value>
+</property>
+<property>
+    <name>yarn.nodemanager.vmem-pmem-ratio</name>
+    <value>1</value>
+</property>
+
+
+
+#start-history-server.sh (실행?)
+
+
+*** hd-master 서버
+
+    ==> spark 애플리케이션 실행서버로 셋팅 
+    ==> 다른 스파크 서버와 동일하게 셋팅
+
+
+
+*** 에러
+
+1. spark-client://Executor ====> 포트 고정?
+17/12/22 18:29:49 INFO CoarseGrainedSchedulerBackend$DriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (192.168.198.143:35390) with ID 1
+17/12/22 18:29:49 INFO CoarseGrainedSchedulerBackend$DriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (192.168.198.142:51304) with ID 0
+17/12/22 18:29:49 INFO BlockManagerMasterEndpoint: Registering block manager 192.168.198.142:9093 with 366.3 MB RAM, BlockManagerId(0, 192.168.198.142, 9093, None)
+17/12/22 18:29:49 INFO BlockManagerMasterEndpoint: Registering block manager 192.168.198.143:9093 with 366.3 MB RAM, BlockManagerId(1, 192.168.198.143, 9093, None)
+
+2. 
+17/12/22 18:42:34 INFO Client: Submitting application application_1513934166830_0001 to ResourceManager
+17/12/22 18:42:41 INFO YarnClientImpl: Submitted application application_1513934166830_0001
+17/12/22 18:42:41 INFO SchedulerExtensionServices: Starting Yarn extension services with app application_1513934166830_0001 and attemptId None
+17/12/22 18:42:42 INFO Client: Application report for application_1513934166830_0001 (state: ACCEPTED)
+17/12/22 18:42:42 INFO Client:
+         client token: N/A
+         diagnostics: [Fri Dec 22 18:42:40 +0900 2017] Scheduler has assigned a container for AM, waiting for AM container to be launched
+         ApplicationMaster host: N/A
+         ApplicationMaster RPC port: -1
+         queue: default
+         start time: 1513935759053
+         final status: UNDEFINED
+         tracking URL: http://hd-master:8088/proxy/application_1513934166830_0001/
+         user: hadoop
+17/12/22 18:42:43 INFO Client: Application report for application_1513934166830_0001 (state: ACCEPTED)
+
+====> /etc/hadoop/conf/capacity-scheduler.xml 
+      chaged 
+      yarn.scheduler.capacity.maximum-am-resource-percent 
+      from 0.1 to 0.5.
+
+
+3. 17/12/22 15:37:14 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(hadoop); groups with view permissions: Set(); users  with modify permissions: Set(hadoop); groups with modify permissions: Set()
+

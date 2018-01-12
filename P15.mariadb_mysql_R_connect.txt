@@ -1,0 +1,45 @@
+﻿- https://github.com/r-dbi/RMariaDB
+
+sudo yum -y install mariadb-devel mysql-devel
+install.packages("RMariaDB")
+#install.packages("RMySQL")
+
+      ===> 다른 설치 방법
+      # install.packages("devtools")
+      devtools::install_github("rstats-db/DBI")
+      devtools::install_github("rstats-db/RMariaDB")
+
+
+library(DBI)
+
+# Connect to my-db as defined in ~/.my.cnf (http://db.rstudio.com/databases/my-sql/)
+con <- dbConnect(RMariaDB::MariaDB(), group = "rs-dbi")
+#con <- dbConnect(RMySQL::MySQL(), group = "my-db")
+
+dbListTables(con)
+
+(mtcars)
+
+dbWriteTable(con, "mtcars", mtcars)
+dbListTables(con)
+
+dbListFields(con, "mtcars")
+dbReadTable(con, "mtcars")
+
+# You can fetch all results:
+res <- dbSendQuery(con, "SELECT * FROM mtcars WHERE cyl = 4")
+dbFetch(res)
+dbClearResult(res)
+
+# Or a chunk at a time
+res <- dbSendQuery(con, "SELECT * FROM mtcars WHERE cyl = 4")
+while(!dbHasCompleted(res)){
+  chunk <- dbFetch(res, n = 5)
+  print(nrow(chunk))
+}
+# Clear the result
+dbClearResult(res)
+
+# Disconnect from the database
+dbDisconnect(con)
+
